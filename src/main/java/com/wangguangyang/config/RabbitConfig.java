@@ -1,0 +1,88 @@
+package com.wangguangyang.config;
+
+import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.DirectExchange;
+import org.springframework.amqp.core.Queue;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * RabbitMQ 配置类
+ *
+ * 是什么：声明 RabbitMQ 里要用到的队列(Queue)、交换机(Exchange)、绑定(Binding)等基础设施。
+ * 干什么：把这些基础设施声明成 Spring Bean，项目启动时 Spring 会自动在 RabbitMQ 服务端创建它们。
+ * 为什么：队列如果不提前声明，消费者监听一个不存在的队列会直接报错；生产者发消息也会失败。
+ *
+ * 当前只声明了一个「短信验证码队列」，将来需要交换机做路由/广播时，再往这里加 Exchange 和 Binding 的 Bean。
+ */
+@Configuration
+public class RabbitConfig {
+
+    /*sms是短消息的意思*/
+    /**
+     * 队列名常量
+     *
+     * 为什么抽成常量：生产者和消费者都要用同一个队列名，抽成常量能避免两边手写字符串
+     * 不小心写错（比如一边写 sms.queue、一边写 sms_queue），导致"发了消息却没人收"的诡异问题。
+     */
+    public static final String SMS_QUEUE = "code";
+
+    /**
+     * 交换机名常量
+     * 为什么抽成常量：和队列名一样，生产者在 convertAndSend 时要指定交换机名，抽成常量避免写错。
+     */
+    public static final String SMS_EXCHANGE = "code.exchange";
+
+    /**
+     * 路由键(routing key)常量
+     * 为什么抽成常量：Direct 交换机靠 routing key 精确匹配，发送方和绑定方都要用它，抽成常量保证一致。
+     */
+    public static final String SMS_ROUTING_KEY = "code";
+
+    /**
+     * 声明一个短信验证码队列
+     *
+     * new Queue(队列名, durable)：
+     *   - durable = true：队列持久化到磁盘，RabbitMQ 重启后队列本身还在
+     *     （注意：队列持久化 ≠ 消息持久化，消息是否持久化要在发消息时单独指定 deliveryMode）。
+     *   - exclusive = false（默认）：非排他，多个连接可以共享这个队列。
+     *   - autoDelete = false（默认）：即使没有消费者，也不会自动删除队列。
+     */
+    @Bean
+    public Queue smsQueue() {
+        return new Queue(SMS_QUEUE, true);
+    }
+
+    /**
+     * 声明一个 Direct 交换机
+     *
+     * 是什么：DirectExchange 是「直连」类型交换机，路由规则是 routing key 完全相等才投递。
+     * 干什么：作为消息的中转站，接收生产者发来的消息，按 routing key 精确路由到绑定的队列。
+     * 为什么：默认交换机只能做到「routing key = 队列名」这一种点对点，显式声明后可以自由定义
+     *         交换机名和 routing key，让生产者和队列彻底解耦。
+     *
+     * new DirectExchange(交换机名, durable, autoDelete)：
+     *   - durable = true：交换机持久化，RabbitMQ 重启后交换机还在。
+     *   - autoDelete = false：即使没有队列绑定，也不自动删除交换机。
+     */
+    @Bean
+    public DirectExchange smsExchange() {
+        return new DirectExchange(SMS_EXCHANGE, true, false);
+    }
+
+    /**
+     * 把队列绑定到交换机上（用 routing key 连接起来）
+     *
+     * 是什么：Binding 是「交换机 ↔ 队列」之间的连线规则，核心是绑定时指定的 routing key。
+     * 干什么：声明后，凡是发到 sms.exchange 且 routing key = "sms" 的消息，都会被路由进 code 队列。
+     * 为什么：交换机本身不存消息，必须靠 Binding 告诉它「符合什么条件就投给哪个队列」，
+     *         否则交换机收了消息也不知道该发给谁。
+     *
+     * BindingBuilder.bind(队列).to(交换机).with(routing key)：链式写法，语义一目了然。
+     */
+    @Bean
+    public Binding smsBinding(Queue smsQueue, DirectExchange smsExchange) {
+        return BindingBuilder.bind(smsQueue).to(smsExchange).with(SMS_ROUTING_KEY);
+    }
+}

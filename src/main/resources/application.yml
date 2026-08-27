@@ -1,0 +1,118 @@
+server:
+  port: 8080
+
+spring:
+  # ================= 导入敏感配置（密码等） =================
+  # 是什么：Spring Boot 2.4+ 的「配置导入」机制，加载额外的配置文件。
+  # 干什么：把 secret.yml 也加载进 Environment，这样下面才能用 ${secret.xxx} 引用到它的值。
+  # 为什么：classpath: 前缀表示从类路径(编译后 resources)找文件；不写则默认当成相对路径。
+  config:
+    import: classpath:secret.yml
+
+  # ================= RabbitMQ 配置 =================
+  # 是什么：Spring Boot 的 RabbitMQ 自动配置会读取 spring.rabbitmq.* 这些键，据此建好连接工厂(CachingConnectionFactory)。
+  # 干什么：让 RabbitTemplate(发消息) 和 @RabbitListener(收消息) 能连上你虚拟机里的 RabbitMQ 服务。
+  # 为什么：不配这些，程序默认连 localhost:5672 + guest 账号 + / vhost，连不上你 192.168.100.128 的服务。
+  rabbitmq:
+    host: 192.168.100.128     # RabbitMQ 服务端地址(你的虚拟机)
+    port: 5672                # AMQP 协议端口，默认 5672，你说了没改
+    username: root    # 连接用的用户名
+    password: ${secret.rabbitmq-password}   # 密码，从 secret.yml 引用
+    virtual-host: /my_project # 要连接的虚拟主机(vhost)。和 username 同名，但含义不同：一个管"连哪个隔离区"，一个管"用谁的身份连"
+
+    # ================= 发送者可靠性 =================
+    # publisher-confirm-type：开启「发布确认」，消息到达交换机后 RabbitMQ 回 ack/nack。
+    #   correlated = 异步回调方式（推荐），配合 ConfirmCallback 使用。
+    publisher-confirm-type: correlated
+    # publisher-returns：开启「发布退回」，消息路由不到队列时退回给发送者。
+    publisher-returns: true
+    template:
+      # mandatory：路由失败时「退回」而不是「丢弃」（false 会静默丢消息，等于没开退回）。
+      mandatory: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${secret.redis-password}
+      database: 0
+
+  # ================= MySQL 数据源配置 =================
+  # 是什么：Spring Boot 的 DataSource 自动配置读 spring.datasource.*，据此建连接池和数据源。
+  # 干什么：让 MyBatis 的 SqlSessionFactory 连上本地 MySQL。
+  # 为什么：不配这些，程序启动时会因连不上数据源而报错。
+  datasource:
+    # url：JDBC 连接串。? 后面的参数含义：
+    #   useUnicode + characterEncoding → 防中文乱码
+    #   serverTimezone=Asia/Shanghai → 统一时区(否则时间差 8 小时)
+    #   useSSL=false → 关闭 SSL(本地/内网开发)
+    #   allowPublicKeyRetrieval=true → 允许取公钥(MySQL 8 的 caching_sha2_password 需要，否则报 Public Key Retrieval is not allowed)
+    url: jdbc:mysql://localhost:3306/my_project?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: ${secret.mysql-password}   # 密码，从 secret.yml 引用
+    driver-class-name: com.mysql.cj.jdbc.Driver   # 可省略(Boot 从 url 前缀自动推断)，显式写更清晰
+
+    # ================= 连接池(HikariCP，Spring Boot 默认，无需引依赖) =================
+    # 以下全部可省略，HikariCP 有默认值；写出来方便后面按需调优
+    hikari:
+      maximum-pool-size: 10      # 最大连接数
+      minimum-idle: 5            # 最小空闲连接数
+      connection-timeout: 30000  # 获取连接超时(毫秒)
+      idle-timeout: 600000       # 空闲连接回收时间(毫秒)
+      max-lifetime: 1800000      # 连接最大存活时间(毫秒)，要小于数据库 wait_timeout
+      pool-name: MyProjectPool   # 连接池名字，排查问题时日志里能认出来
+
+# ================= MyBatis-Plus 配置 =================
+# 是什么：MyBatis-Plus 的自动配置读 mybatis-plus.* 这些键(注意前缀是 mybatis-plus，不是 mybatis)。
+# 干什么：指定 Mapper XML 位置、实体别名、驼峰映射、SQL 日志等。
+# 为什么：换成 MyBatis-Plus 后前缀变了；map-underscore-to-camel-case 其实 MyBatis-Plus 默认就开启，
+#         这里显式写出是为了可读性。
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml          # XML 位置(用 BaseMapper 后一般不需要，自定义复杂 SQL 时才用)
+  type-aliases-package: com.wangguangyang.entity    # 实体类包，XML 里 resultType="User" 不用写全限定名
+  configuration:
+    map-underscore-to-camel-case: true              # 数据库 user_name → Java userName
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl   # SQL 打印到控制台(开发看 SQL 方便)
+
+# ================= JWT 配置 =================
+# 是什么：登录时生成/解析 token 用到的密钥和有效期。
+# 干什么：JwtUtils 读这两个值，secret 用于签名(HMAC-SHA256)，expire 是 token 有效期。
+# 为什么：密钥不能硬编码在代码里，放配置里方便改；密钥长度要 >= 32 字节(HS256 要求)。
+jwt:
+  secret: my-project-jwt-secret-key-wangguangyang-2026-abcdefghijklmnopqrstuvwxyz
+  expire: 86400000            # token 有效期(毫秒)，86400000 = 24 小时
+
+
+
+logging:
+  # ================= 日志级别 =================
+  # 规则：只会输出 >= 该级别的日志（TRACE < DEBUG < INFO < WARN < ERROR）
+  level:
+    root: INFO                # 全局默认级别（兜底，未单独指定的包都按它走）
+    com.wangguangyang: DEBUG  # 自己的业务包调细，方便排查问题
+    org.springframework: WARN # 框架包调粗，减少噪音
+
+  # ================= 日志输出到文件 =================
+  file:
+    name: logs/my_project.log # 相对项目根目录；也可写绝对路径如 D:/logs/my_project.log
+
+  # ================= 文件滚动（切割）策略 =================
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB     # 单个文件达到 10MB 就滚动切割
+      max-history: 7          # 归档文件保留 7 天
+      total-size-cap: 1GB     # 所有归档文件总大小上限（超过则删除最旧的）
+
+  # ================= 日志输出格式 =================
+  pattern:
+    # 控制台格式（带颜色，%clr 仅控制台有效）
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%-5level){blue} %clr([%thread]){magenta} %clr(%logger{36}){cyan} - %msg%n"
+    # 文件格式（纯文本，不能带 %clr，否则会把颜色转义码写进文件变成乱码）
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
+
+
+
+knife4j:
+  enable: true               # 开启 knife4j 增强
+  setting:
+    language: zh_cn          # 界面默认中文（官方标准值，须用连字符 zh-CN，下划线 zh_cn 不生效）

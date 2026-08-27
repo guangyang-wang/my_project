@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.wangguangyang</groupId>
+    <artifactId>my_project</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.3</version>   <!-- 选一个稳定版本，如 3.5.3 -->
+        <relativePath/>
+    </parent>
+
+    <!--
+      - 是什么：它是一个父工程（parent POM），你继承了它，不需要自己声明版本号。
+      - 干什么：
+        - 统一管理所有 Spring Boot 相关依赖的版本（版本仲裁/BOM），你引 starter 时不用写 <version>。
+        - 预设好 maven.compiler.source/target（默认 Java 17+）、UTF-8 编码、maven-compiler-plugin 等插件配置。
+        - 内置了 repackage 配置，方便打出可执行 jar。
+      - 为什么需要：否则你每个依赖都要手动指定版本，还容易版本冲突。
+  -->
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!--
+      - 是什么：一个「starter」（启动器），Spring Boot 的核心设计——把一类功能打包成一个依赖。
+  - 干什么：
+    - 引入内嵌的 Tomcat（让你能直接 main 启动 Web 服务，不需要外部装服务器）。
+    - 引入 Spring MVC（处理 HTTP 请求，@RestController、@RequestMapping 等）。
+    - 引入 Jackson（JSON 序列化/反序列化）。
+    - 它内部还传递依赖了 spring-boot-starter（自动配置、日志、核心启动器等）和 spring-boot-starter-json 等。
+  - 为什么需要：这是让项目能「启动一个 Web 服务」的核心。即使你只想要一个空壳能跑起来，也通常用它。
+
+  ▎ 如果你只想要「能启动、但不需要 Web/端口」，可以用更轻的 spring-boot-starter（只有核心启动 + 自动配置，没有 Tomcat）。但既然你要做的是通常意义上的项目，先用
+  ▎ starter-web 最合适。
+-->
+
+        <dependency>
+            <groupId>com.github.xiaoymin</groupId>
+            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+            <version>4.5.0</version>
+        </dependency>
+        <!--
+            自动生成接口文档
+        -->
+
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!--
+            它是干什么的：Spring 官方的 Redis 启动器，帮你把「连接 Redis、操作 Redis」这一整套东西都配好了。引入后你能拿到两个核心工具：
+
+      ┌─────────────────────┬────────────┬──────────────────────────────────────────────────────┐
+      │        工具         │    类型    │                         用途                         │
+      ├─────────────────────┼────────────┼──────────────────────────────────────────────────────┤
+      │ RedisTemplate       │ 操作对象   │ 最常用，往 Redis 里存/取数据（字符串、对象等）       │
+      ├─────────────────────┼────────────┼──────────────────────────────────────────────────────┤
+      │ StringRedisTemplate │ 操作字符串 │ 只存字符串，登录场景（存 token、验证码）基本用它就够 │
+      └─────────────────────┴────────────┴──────────────────────────────────────────────────────┘
+
+      它内部还帮你做了什么：
+      - 自动读取 application.yml 里的 spring.data.redis.* 配置，帮你建好连接
+      - 默认用 Lettuce 作为 Redis 客户端（Spring Boot 2.x 起默认 Lettuce，不是老项目常用的 Jedis），性能好、支持异步、线程安全
+      - 提供自动配置的连接工厂 LettuceConnectionFactory
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
+        <!--
+            - 是什么：Spring 官方的 RabbitMQ 启动器（AMQP 是 RabbitMQ 用的消息协议）。
+            - 干什么：
+              - 传递引入 spring-amqp 和 amqp-client（RabbitMQ 官方底层客户端），你不用管底层。
+              - 提供两个核心工具：
+                ┌─────────────────┬──────────────────────────────────────────┐
+                │  RabbitTemplate  │ 发消息（把验证码发到队列）               │
+                ├─────────────────┼──────────────────────────────────────────┤
+                │ @RabbitListener │ 收消息（监听队列，模拟发短信）            │
+                └─────────────────┴──────────────────────────────────────────┘
+              - 自动读取 application.yml 里的 spring.rabbitmq.* 配置，自动建好连接工厂。
+            - 为什么需要：发短信是慢操作（要调第三方接口），用队列解耦后接口立刻返回，不用等短信真正发出。
+              和 Redis 一样，RabbitTemplate 默认就自动配好，直接 @Autowired 就能用（发字符串消息不会乱码）。
+        -->
+
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+        </dependency>
+        <!--
+            - 是什么：MySQL 官方 JDBC 驱动，Java 程序连 MySQL 的"翻译官"。
+            - 干什么：让 JDBC 认识 jdbc:mysql:// 协议，真正建立到 MySQL 的连接。
+            - 为什么：
+              - 坐标注意：Spring Boot 3.x 用 com.mysql:mysql-connector-j（旧的 mysql:mysql-connector-java 已废弃）。
+              - 版本不用写：由 spring-boot-starter-parent 统一仲裁。
+        -->
+
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>3.5.7</version>
+        </dependency>
+        <!--
+            - 是什么：MyBatis-Plus 的启动器（MyBatis 增强版），内部已包含 mybatis-spring-boot-starter。
+            - 干什么：提供 BaseMapper(继承即得通用 CRUD，免写 XML)、@TableLogic 逻辑删除、
+                      条件构造器 Wrapper、MetaObjectHandler 审计字段自动填充等。
+            - 为什么：
+              - 坐标注意：Spring Boot 3 必须用 mybatis-plus-spring-boot3-starter(jakarta 版)，
+                          不能用老的 mybatis-plus-boot-starter(那是 Boot 2 的 javax 版)。
+              - 不能和 mybatis-spring-boot-starter 同时引(重复冲突)，所以这里是替换而非新增。
+              - 版本自己写：MyBatis-Plus 不是 Boot 官方 parent 管理的，需手动指定 3.5.x。
+        -->
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!--
+            - 是什么：Lombok，Java 的代码生成器，靠注解在【编译期】自动生成样板代码。
+            - 干什么：实体类上加 @Data 自动生成 getter/setter/toString/equals/hashCode，不用手写一堆模板方法。
+            - 为什么：
+              - optional=true：lombok 只在编译期用、运行时不需要，所以标记 optional 不打进 fat jar、也不传递给依赖方。
+              - 版本不用写：由 spring-boot-starter-parent 统一仲裁。
+              - 注意：IDE 要装 Lombok 插件，否则编译期生成的 getter/setter 在 IDE 里会标红(实际能编译)。
+        -->
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!--
+            - 是什么：Spring Boot 官方的测试启动器，打包了一整套测试库。
+            - 干什么：提供 @SpringBootTest(启动完整容器的集成测试)、JUnit 5(写 @Test 用例)、
+                      Mockito(模拟依赖)、AssertJ(断言)等。
+            - 为什么：
+              - scope=test：只在 src/test 下编译和运行可用，打正式 jar 时不包含(测试依赖不进生产包)。
+              - 版本不用写：由 spring-boot-starter-parent 统一仲裁。
+        -->
+
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <!--
+            - 是什么：JJWT(Java JWT)，最主流的 JWT 第三方库。
+            - 干什么：生成 token(Jwts.builder) 和解析 token(Jwts.parser)。
+            - 为什么拆成三个：
+              - jjwt-api：核心接口，编译期需要。
+              - jjwt-impl：实现类，运行时需要(scope=runtime，编译期用不到)。
+              - jjwt-jackson：JSON 序列化(Jackson 版)，运行时需要。
+              - 三个缺一不可。注意 JWT 不是 Spring Boot 官方库，版本要自己写(0.12.6)。
+        -->
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+        <!--
+            - 是什么：Spring Security 的加密模块(只引 crypto，不引整个 security 框架)。
+            - 干什么：提供 BCryptPasswordEncoder，用于密码加密和登录时的比对。
+            - 为什么：
+              - 密码不能存明文，登录比对用 matches(明文, 密文) 而不是 equals。
+              - 版本不用写：由 spring-boot-starter-parent 统一仲裁(spring-security-bom)。
+        -->
+
+    </dependencies>
+
+
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!--
+          - 是什么：Maven 插件（不是运行时依赖）。
+      - 干什么：
+        - 支持 mvn spring-boot:run 直接启动项目。
+        - mvn package 时把项目打成可执行 fat jar（把 Tomcat、所有依赖一起打进去，java -jar 就能跑）。
+      - 为什么需要：方便开发和部署。不用它也能编译，但没法优雅地一键运行/打可执行包。
+    -->
+
+
+</project>
