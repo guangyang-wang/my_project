@@ -194,6 +194,29 @@
               - 版本不用写：由 spring-boot-starter-parent 统一仲裁(spring-security-bom)。
         -->
 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+        </dependency>
+        <!--
+            - 是什么：Spring 官方的 Elasticsearch 启动器（Spring Data Elasticsearch）。
+            - 干什么：
+              - 传递引入 Elasticsearch 8.x 的官方 Java 客户端（co.elastic.clients:elasticsearch-java，新版 API，
+                不是已废弃的 RestHighLevelClient）。
+              - 提供两个核心工具：
+                ┌────────────────────────────┬──────────────────────────────────────────────┐
+                │  ElasticsearchOperations   │ 底层操作：建索引、增删改查文档、执行查询        │
+                ├────────────────────────────┼──────────────────────────────────────────────┤
+                │  ElasticsearchRepository   │ 类似 Spring Data JPA 的 Repository，继承即得   │
+                │                            │ 常用 CRUD + 分页查询                          │
+                └────────────────────────────┴──────────────────────────────────────────────┘
+              - 自动读取 application.yml 里的 spring.elasticsearch.* 配置，建好连接。
+            - 为什么需要：课程查询要做中文分词搜索（课程名/教师/专业），MySQL 的 LIKE 做不到分词，
+              用 ES 的 IK 分词器才能搜"高等数学"时匹配到"数学"。
+            - 版本不用写：由 spring-boot-starter-parent 统一仲裁（Spring Boot 3.5 对应 ES 8.x 客户端）。
+            - 注意：ES 服务端要装 8.x（和客户端版本匹配），中文分词要装 IK 插件（IK 版本必须和 ES 服务端版本一致）。
+        -->
+
     </dependencies>
 
 

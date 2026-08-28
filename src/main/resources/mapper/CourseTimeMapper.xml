@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  课程-时间片关联的 Mapper XML
+
+  是什么：MyBatis 的 SQL 映射文件，写自定义复杂 SQL（BaseMapper 覆盖不了的那种）。
+  干什么：用 <foreach> 把一门课的多个时间片拼成一条 INSERT ... VALUES (...),(...),(...)，
+          替代 for 循环逐条 insert。
+  为什么：一条 SQL 插多行，减少数据库往返；且一条 INSERT 天然原子——
+          只要有一行撞唯一索引，整条语句失败，配合事务做到"全部成功或全部失败"。
+-->
+<mapper namespace="com.wangguangyang.mapper.CourseTimeMapper">
+
+    <!-- 批量插入：INSERT INTO course_time (...) VALUES (…),(…),(…) -->
+    <insert id="insertBatch">
+        INSERT INTO course_time (course_id, time_slot_id, classroom) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.courseId}, #{item.timeSlotId}, #{item.classroom})
+        </foreach>
+    </insert>
+
+</mapper>

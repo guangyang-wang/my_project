@@ -24,11 +24,7 @@ public class UserController {
     @GetMapping("/code")
     @Operation(summary = "获取验证码",description = "用户获取验证码")
     public Result<Object> generateCode(@Parameter(description = "手机号") @RequestParam("phone")String phone ){
-        try {
-            userService.generateCode(phone);
-        }catch (Exception e){
-            return Result.error(e.getMessage());
-        }
+        userService.generateCode(phone);
         return Result.success();
     }
 

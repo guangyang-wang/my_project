@@ -34,11 +34,7 @@ public class LoginController {
     @PostMapping("/studentlogin")
     @Operation(summary = "学号密码登录", description = "前端传学号和密码，校验通过返回 token")
     public Result<LoginVO> studentLogin(@RequestBody StudentLoginDTO dto) {
-        try {
-            return Result.success(userService.studentLogin(dto));
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+        return Result.success(userService.studentLogin(dto));
     }
 
     /**
@@ -48,11 +44,7 @@ public class LoginController {
     @PostMapping("/phonelogin")
     @Operation(summary = "手机号验证码登录", description = "前端传手机号和验证码，校验通过返回 token")
     public Result<LoginVO> phoneLogin(@RequestBody PhoneLoginDTO dto) {
-        try {
-            return Result.success(userService.phoneLogin(dto));
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+        return Result.success(userService.phoneLogin(dto));
     }
 
     /**
@@ -62,11 +54,7 @@ public class LoginController {
     @PostMapping("/register")
     @Operation(summary = "注册", description = "前端传姓名、学号、密码、身份证、性别、学院、专业、班级、入学年份")
     public Result<Object> register(@RequestBody RegisterDTO dto) {
-        try {
-            userService.register(dto);
-            return Result.success();
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+        userService.register(dto);
+        return Result.success();
     }
 }

@@ -1,6 +1,7 @@
 package com.wangguangyang.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.wangguangyang.common.BusinessException;
 import com.wangguangyang.config.RabbitConfig;
 import com.wangguangyang.dto.PhoneLoginDTO;
 import com.wangguangyang.dto.RegisterDTO;
@@ -46,7 +47,7 @@ public class UserServiceImpl implements UserService {
         // 1. 校验手机号：1 开头，第二位 3~9，共 11 位数字
         String phoneRegex = "^1[3-9]\\d{9}$";
         if (phone == null || !phone.matches(phoneRegex)) {
-            throw new IllegalArgumentException("手机号格式不正确");
+            throw new BusinessException("手机号格式不正确");
         }
 
         // 2. 生成 6 位验证码（100000 ~ 999999）
@@ -82,12 +83,12 @@ public class UserServiceImpl implements UserService {
 
         // 2. 用户不存在
         if (user == null) {
-            throw new RuntimeException("学号不存在");
+            throw new BusinessException("学号不存在");
         }
 
         // 3. 比对密码：BCrypt 的 matches(明文, 密文)，不是 equals（数据库存的是密文）
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-            throw new RuntimeException("密码错误");
+            throw new BusinessException("密码错误");
         }
 
         // 4. 生成 token，封装返回
@@ -102,12 +103,12 @@ public class UserServiceImpl implements UserService {
 
         // 2. 验证码不存在或已过期
         if (redisCode == null) {
-            throw new RuntimeException("验证码已过期，请重新获取");
+            throw new BusinessException("验证码已过期，请重新获取");
         }
 
         // 3. 比对验证码
         if (!redisCode.equals(dto.getCode())) {
-            throw new RuntimeException("验证码错误");
+            throw new BusinessException("验证码错误");
         }
 
         // 4. 根据手机号查用户
@@ -117,7 +118,7 @@ public class UserServiceImpl implements UserService {
 
         // 5. 用户不存在（该手机号没注册）
         if (user == null) {
-            throw new RuntimeException("该手机号未注册");
+            throw new BusinessException("该手机号未注册");
         }
 
         // 6. 验证码用后即删，防止同一个验证码被重复使用
@@ -133,30 +134,30 @@ public class UserServiceImpl implements UserService {
         // 1. 校验学号格式：4位年份 + 30 + 4位任意数字（共10位），如 2024302803
         String studentNoRegex = "^\\d{4}30\\d{4}$";
         if (!StringUtils.hasText(dto.getStudentNo()) || !dto.getStudentNo().matches(studentNoRegex)) {
-            throw new RuntimeException("学号格式不正确，应为4位年份+30+4位数字，如2024302803");
+            throw new BusinessException("学号格式不正确，应为4位年份+30+4位数字，如2024302803");
         }
         String phoneNoRegex = "^1[3-9]\\d{9}$";
 
         if(!StringUtils.hasText(dto.getPhone())||!dto.getPhone().matches(phoneNoRegex)){
-            throw new RuntimeException("电话号码格式不对");
+            throw new BusinessException("电话号码格式不对");
         }
 
         // 2. 校验必填字段（姓名、密码、身份证、性别、学院、专业、班级、入学年份）
-        if (!StringUtils.hasText(dto.getName())) throw new RuntimeException("姓名不能为空");
-        if (!StringUtils.hasText(dto.getPassword())) throw new RuntimeException("密码不能为空");
-        if (!StringUtils.hasText(dto.getIdCard())) throw new RuntimeException("身份证不能为空");
-        if (dto.getGender() == null) throw new RuntimeException("性别不能为空");
-        if (!StringUtils.hasText(dto.getCollege())) throw new RuntimeException("学院不能为空");
-        if (!StringUtils.hasText(dto.getMajor())) throw new RuntimeException("专业不能为空");
-        if (!StringUtils.hasText(dto.getClassName())) throw new RuntimeException("班级不能为空");
-        if (dto.getEnrollmentYear() == null) throw new RuntimeException("入学年份不能为空");
+        if (!StringUtils.hasText(dto.getName())) throw new BusinessException("姓名不能为空");
+        if (!StringUtils.hasText(dto.getPassword())) throw new BusinessException("密码不能为空");
+        if (!StringUtils.hasText(dto.getIdCard())) throw new BusinessException("身份证不能为空");
+        if (dto.getGender() == null) throw new BusinessException("性别不能为空");
+        if (!StringUtils.hasText(dto.getCollege())) throw new BusinessException("学院不能为空");
+        if (!StringUtils.hasText(dto.getMajor())) throw new BusinessException("专业不能为空");
+        if (!StringUtils.hasText(dto.getClassName())) throw new BusinessException("班级不能为空");
+        if (dto.getEnrollmentYear() == null) throw new BusinessException("入学年份不能为空");
 
         // 3. 校验学号唯一（不能重复注册）
         Long count = userMapper.selectCount(
                 new LambdaQueryWrapper<User>().eq(User::getStudentNo, dto.getStudentNo())
         );
         if (count != null && count > 0) {
-            throw new RuntimeException("该学号已注册");
+            throw new BusinessException("该学号已注册");
         }
 
         // 4. 封装 User 对象（密码用 BCrypt 加密，绝不存明文）
