@@ -37,6 +37,15 @@ spring:
       password: ${secret.redis-password}
       database: 0
 
+  # ================= Elasticsearch 配置 =================
+  # 是什么：Spring Boot 的 ES 自动配置读 spring.elasticsearch.*，据此建好 ElasticsearchClient 客户端。
+  # 干什么：让 ElasticsearchOperations / ElasticsearchRepository 能连上你虚拟机里的 ES 服务。
+  # 为什么：不配这些，程序默认连 localhost:9200，连不上你 192.168.100.128 的服务。
+  elasticsearch:
+    uris: http://192.168.100.128:9200   # ES 服务地址。复数 uris，集群时逗号分隔多个节点
+    connection-timeout: 3s              # 建立 TCP 连接的超时时间
+    socket-timeout: 60s                 # 读数据超时(查询/分词可能较慢，给足一点)
+
   # ================= MySQL 数据源配置 =================
   # 是什么：Spring Boot 的 DataSource 自动配置读 spring.datasource.*，据此建连接池和数据源。
   # 干什么：让 MyBatis 的 SqlSessionFactory 连上本地 MySQL。
