@@ -85,4 +85,114 @@ public class RabbitConfig {
     public Binding smsBinding(Queue smsQueue, DirectExchange smsExchange) {
         return BindingBuilder.bind(smsQueue).to(smsExchange).with(SMS_ROUTING_KEY);
     }
+
+    /* ==================== Canal 同步 ES 相关（双写一致性） ==================== */
+
+    /**
+     * Canal 队列名常量
+     *
+     * 来源：D:\canal\canal.deployer-1.1.7\conf\canal.properties 里的 rabbitmq.queue = canal.queue。
+     * 为什么抽成常量：Canal 那边已经把队列声明好了，Spring Boot 这边监听同一个队列，
+     *         抽成常量避免两处（Canal 配置 vs 代码）手写字符串不一致。
+     */
+    public static final String CANAL_QUEUE = "canal.queue";
+
+    /**
+     * Canal 交换机名常量
+     *
+     * 来源：canal.properties 里的 rabbitmq.exchange = canal.exchange。
+     */
+    public static final String CANAL_EXCHANGE = "canal.exchange";
+
+    /**
+     * Canal 路由键常量
+     *
+     * 来源：conf\example\instance.properties 里的 canal.mq.topic = canal
+     *         （Canal 发送时用 instance 的 topic 作为 routing key）。
+     */
+    public static final String CANAL_ROUTING_KEY = "canal";
+
+    /**
+     * 声明 Canal 消息队列
+     *
+     * 是什么：Canal 订阅 binlog 后，把变更消息发到这个队列，Spring Boot 消费端监听它。
+     * 干什么：声明成 Bean，Spring Boot 启动时在 RabbitMQ 服务端创建（若已存在则幂等跳过）。
+     * 为什么：
+     *   - 队列如果不提前声明，@RabbitListener 监听一个不存在的队列会启动报错；
+     *   - durable=true：队列持久化，RabbitMQ 重启后队列还在，不丢消息。
+     */
+    @Bean
+    public Queue canalQueue() {
+        return new Queue(CANAL_QUEUE, true);
+    }
+
+    /**
+     * 声明 Canal 交换机（direct 类型）
+     *
+     * 是什么：Canal 发消息的中转站，类型必须和 Canal 配置的 rabbitmq.exchange.type = direct 一致。
+     * 干什么：声明成 Bean 保证交换机存在，Canal 发来的消息能正常路由。
+     * 为什么：Spring Boot 独立启动时也能建好交换机，不依赖 Canal 先启动；
+     *         durable=true 持久化，autoDelete=false 不自动删除。
+     */
+    @Bean
+    public DirectExchange canalExchange() {
+        return new DirectExchange(CANAL_EXCHANGE, true, false);
+    }
+
+    /**
+     * 把 Canal 队列绑定到 Canal 交换机（routing key = canal）
+     *
+     * 干什么：让 Canal 发到 canal.exchange、routing key = canal 的消息，路由进 canal.queue，
+     *         被我们的 @RabbitListener 消费。
+     * 为什么：绑定规则必须和 Canal 端的声明一致（exchange + routing key + 队列三者对齐），
+     *         否则消息会「发出来了但没人收」或「路由不到队列被丢弃」。
+     */
+    @Bean
+    public Binding canalBinding(Queue canalQueue, DirectExchange canalExchange) {
+        return BindingBuilder.bind(canalQueue).to(canalExchange).with(CANAL_ROUTING_KEY);
+    }
+
+    /* ==================== 抢课异步落库相关 ==================== */
+
+    /**
+     * 抢课队列名常量
+     *
+     * 干什么：抢课接口在 Redis 预扣成功后，发一条消息到这个队列，由 EnrollConsumer 异步落库。
+     * 为什么抽成常量：生产者和消费者都要用同一个队列名，抽成常量避免两边手写字符串写错。
+     */
+    public static final String ENROLL_QUEUE = "enroll.queue";
+
+    /**
+     * 抢课交换机名常量
+     */
+    public static final String ENROLL_EXCHANGE = "enroll.exchange";
+
+    /**
+     * 抢课路由键常量
+     */
+    public static final String ENROLL_ROUTING_KEY = "enroll";
+
+    /**
+     * 声明抢课队列（durable=true 持久化，RabbitMQ 重启后队列还在）
+     */
+    @Bean
+    public Queue enrollQueue() {
+        return new Queue(ENROLL_QUEUE, true);
+    }
+
+    /**
+     * 声明抢课交换机（direct 类型，按 routing key 精确路由）
+     */
+    @Bean
+    public DirectExchange enrollExchange() {
+        return new DirectExchange(ENROLL_EXCHANGE, true, false);
+    }
+
+    /**
+     * 把抢课队列绑定到抢课交换机（routing key = enroll）
+     */
+    @Bean
+    public Binding enrollBinding(Queue enrollQueue, DirectExchange enrollExchange) {
+        return BindingBuilder.bind(enrollQueue).to(enrollExchange).with(ENROLL_ROUTING_KEY);
+    }
 }

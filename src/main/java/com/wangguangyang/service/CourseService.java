@@ -1,7 +1,10 @@
 package com.wangguangyang.service;
 
+import com.wangguangyang.common.PageResult;
 import com.wangguangyang.dto.CourseAddDTO;
+import com.wangguangyang.dto.CourseQueryDTO;
 import com.wangguangyang.dto.CourseUpdateDTO;
+import com.wangguangyang.vo.CourseSearchVO;
 
 /**
  * 课程业务接口
@@ -36,4 +39,12 @@ public interface CourseService {
      * 时间/教室冲突由唯一索引兜底 + 前置查重（均排除自身）。
      */
     void updateCourse(CourseUpdateDTO dto);
+
+    /**
+     * 搜索课程（查 Elasticsearch）
+     *
+     * 业务规则：按课程编号精确匹配（Keyword term 查询）、按课程名称分词模糊匹配（Text match 查询），
+     * 两个条件都传时取交集（must=AND），都不传则查全部；结果分页返回。
+     */
+    PageResult<CourseSearchVO> searchCourses(CourseQueryDTO dto);
 }

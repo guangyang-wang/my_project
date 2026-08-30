@@ -1,13 +1,17 @@
 package com.wangguangyang.controller;
 
+import com.wangguangyang.common.PageResult;
 import com.wangguangyang.common.Result;
 import com.wangguangyang.dto.CourseAddDTO;
+import com.wangguangyang.dto.CourseQueryDTO;
 import com.wangguangyang.dto.CourseUpdateDTO;
+import com.wangguangyang.vo.CourseSearchVO;
 import com.wangguangyang.service.CourseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -61,5 +65,16 @@ public class CourseController {
     public Result<Object> update(@RequestBody CourseUpdateDTO dto) {
         courseService.updateCourse(dto);
         return Result.success();
+    }
+
+    /**
+     * 搜索课程（查 Elasticsearch）
+     * 路径：GET /course/search?courseNo=xxx&courseName=yyy&pageNum=1&pageSize=10
+     * （GET 请求的查询参数会被 Spring 自动绑定到 CourseQueryDTO，无需 @RequestBody）
+     */
+    @GetMapping("/search")
+    @Operation(summary = "搜索课程", description = "从 Elasticsearch 按编号精确、名称分词模糊搜索课程，分页返回")
+    public Result<PageResult<CourseSearchVO>> search(CourseQueryDTO dto) {
+        return Result.success(courseService.searchCourses(dto));
     }
 }

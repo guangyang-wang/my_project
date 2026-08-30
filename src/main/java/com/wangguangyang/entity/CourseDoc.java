@@ -1,5 +1,6 @@
 package com.wangguangyang.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
@@ -29,6 +30,7 @@ import java.math.BigDecimal;
  */
 @Data
 @NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)  // Canal 行数据里 hours/campus/create_time 等字段本类不存，忽略以免反序列化报错
 @Document(indexName = "course")
 @Setting(shards = 1, replicas = 0)  // 单机开发：1 分片 0 副本，避免单节点副本无法分配导致集群一直黄色
 public class CourseDoc {
