@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 父工程：版本统一由 my-project-parent 管理 -->
+    <parent>
+        <groupId>com.wangguangyang</groupId>
+        <artifactId>my-project-parent</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>gateway</artifactId>
+    <name>gateway</name>
+    <description>网关：统一入口，JWT 鉴权 + 路由转发 + 服务发现</description>
+
+    <dependencies>
+        <!--
+          - 是什么：Spring Cloud Gateway，微服务的统一入口网关。
+          - 干什么：路由转发（把 /xxx 转到对应服务）、统一鉴权、限流。
+          - 为什么：注意它底层是 WebFlux（响应式），所以网关工程【不能】引 spring-boot-starter-web，
+            否则 Servlet 和 Netty 冲突，启动直接报错。
+        -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-gateway</artifactId>
+        </dependency>
+
+        <!--
+          - 是什么：Nacos 服务发现启动器。
+          - 干什么：两件事——① gateway 自己也注册到 Nacos（控制台能看到）；
+            ② 提供 DiscoveryClient，让路由里的 lb://服务名 能根据服务名找到实际实例。
+          - 为什么：微服务实例 IP/端口是动态的，必须靠注册中心做服务发现，不能写死地址。
+        -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+
+        <!--
+          - 是什么：Spring Cloud LoadBalancer 负载均衡器。
+          - 干什么：路由 uri 写 lb://服务名 时，从 Nacos 拿到的多个实例里挑一个转发（默认轮询）。
+          - 为什么：gateway 不会自动带 loadbalancer，用 lb:// 必须显式引，否则路由解析报错。
+        -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+
+        <!--
+          - 是什么：JWT 解析库（三个缺一不可）。
+          - 干什么：网关只做「验签」，不生成 token（生成是 user-service 的事），所以只需 parseToken。
+        -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 打可执行 fat jar -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

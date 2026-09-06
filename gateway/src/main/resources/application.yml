@@ -1,0 +1,26 @@
+server:
+  port: 8081   # 网关端口；原单体 my-project-service 是 8080，两者错开
+
+spring:
+  application:
+    name: gateway   # 网关也注册到 Nacos，控制台能看到
+
+  cloud:
+    # ================= Nacos 注册中心 =================
+    nacos:
+      discovery:
+        server-addr: 192.168.100.128:8848   # Nacos 地址（虚拟机）
+
+    # ================= 网关路由 =================
+    gateway:
+      routes:
+        - id: my-project-service
+          # lb://服务名 = 从 Nacos 拿该服务的实例列表，负载均衡挑一个转发
+          uri: lb://my-project-service
+          predicates:
+            - Path=/**   # 所有路径都转发到 my-project-service（白名单路径不鉴权但仍会路由过去）
+
+# ================= JWT 配置 =================
+# 密钥必须和签发方（my-project-service）完全一致，否则验签失败全部 401
+jwt:
+  secret: my-project-jwt-secret-key-wangguangyang-2026-abcdefghijklmnopqrstuvwxyz

@@ -2,6 +2,14 @@ server:
   port: 8080
 
 spring:
+  # ================= 服务注册与发现（Nacos） =================
+  application:
+    name: my-project-service   # 服务名：注册到 Nacos 的标识，gateway 靠 lb://my-project-service 找到它
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.100.128:8848   # Nacos 注册中心地址（虚拟机）
+
   # ================= 导入敏感配置（密码等） =================
   # 是什么：Spring Boot 2.4+ 的「配置导入」机制，加载额外的配置文件。
   # 干什么：把 secret.yml 也加载进 Environment，这样下面才能用 ${secret.xxx} 引用到它的值。
@@ -36,6 +44,9 @@ spring:
       port: 6379
       password: ${secret.redis-password}
       database: 0
+      # Redisson 说明：引入 redisson-spring-boot-starter 后，RedissonClient 会自动读上面这份
+      # spring.data.redis.* 配置建连接（和 StringRedisTemplate 共用同一份连接），
+      # 所以这里不需要为 Redisson 重复配置地址/密码。
 
   # ================= Elasticsearch 配置 =================
   # 是什么：Spring Boot 的 ES 自动配置读 spring.elasticsearch.*，据此建好 ElasticsearchClient 客户端。

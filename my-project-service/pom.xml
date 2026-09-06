@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 父工程：版本统一由 my-project-parent 管理，这里引依赖不用写 <version> -->
+    <parent>
+        <groupId>com.wangguangyang</groupId>
+        <artifactId>my-project-parent</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>my-project-service</artifactId>
+    <name>my-project-service</name>
+    <description>原单体业务服务：用户/课程/抢课（后续会继续拆分成独立服务）</description>
+
+    <dependencies>
+        <!-- Web：内嵌 Tomcat + Spring MVC + Jackson，能启动 Web 服务的核心 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Nacos 服务发现：启动时注册到 Nacos，gateway 靠 lb://my-project-service 找到它 -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+
+        <!-- knife4j：自动生成接口文档 -->
+        <dependency>
+            <groupId>com.baizhukui</groupId>
+            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- Redis 启动器：提供 StringRedisTemplate（存 token/验证码/抢课缓存），默认 Lettuce 客户端 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- Redisson 启动器：分布式锁核心，缓存击穿防护用。Boot 3.x 必须用 3.x 线 -->
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson-spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- RabbitMQ 启动器：RabbitTemplate 发消息 + @RabbitListener 收消息 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
+        <!-- MySQL 驱动 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+        </dependency>
+
+        <!-- MyBatis-Plus 启动器：BaseMapper 通用 CRUD、条件构造器、逻辑删除。Boot 3 用 spring-boot3 版 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+
+        <!-- Lombok：编译期生成 getter/setter 等样板代码 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 测试启动器 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- JWT：生成和解析 token 用，三个缺一不可 -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Spring Security 加密模块：只引 crypto，提供 BCryptPasswordEncoder 做密码加密比对 -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
+        <!-- Elasticsearch 启动器：课程中文分词搜索，ElasticsearchOperations / Repository -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 打可执行 fat jar（java -jar 直接跑） -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
